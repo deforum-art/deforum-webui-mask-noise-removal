@@ -1,9 +1,10 @@
 import torch
-import PIL #HOTFIXISSUE#33 needed for instruction to generate negative mask. 
+import PIL 
 from PIL import Image, ImageOps
 import requests
 import numpy as np
 import torchvision.transforms.functional as TF
+import torchvision.transforms as T
 from pytorch_lightning import seed_everything
 import os
 from ldm.models.diffusion.plms import PLMSSampler
@@ -26,10 +27,22 @@ from modules import processing
 from modules.shared import opts, sd_model
 from modules.processing import process_images, StableDiffusionProcessingTxt2Img
 
-#MASKARGSEXPANSION 
-#Add option to remove noise in relation to masking so that areas which are masked receive less noise
 def add_noise(sample: torch.Tensor, noise_amt: float) -> torch.Tensor:
     return sample + torch.randn(sample.shape, device=sample.device) * noise_amt
+
+# WIP noise masking. copied from above and executed through a if use_mask branch in render.py
+def add_noise_masked(args, sample: torch.Tensor, noise_amt: float) -> torch.Tensor:
+    # get the mask again, #FIXME see if this can be removed with an arg.
+    mask = prepare_mask(args.mask_file, 
+                            (args.W, args.H), 
+                            args.mask_contrast_adjust, 
+                            args.mask_brightness_adjust, 
+                            args.invert_mask)
+    remove = T.PILToTensor()
+    removedNoise = remove(mask)
+    removedNoise = torch.div(removedNoise, 255)
+
+    return sample + ( torch.randn(sample.shape, device=sample.device) *removedNoise )* noise_amt
 
 def load_img(path, shape, use_alpha_as_mask=False):
     # use_alpha_as_mask: Read the alpha channel of the image as the mask image
