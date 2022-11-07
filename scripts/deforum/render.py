@@ -10,7 +10,7 @@ from PIL import Image
 import pathlib
 import torchvision.transforms as T
 
-from .generate import generate, add_noise
+from .generate import generate, add_noise, add_noise_masked
 from .prompt import sanitize
 from .animation import DeformAnimKeys, sample_from_cv2, sample_to_cv2, anim_frame_warp_2d, anim_frame_warp_3d, vid2frames
 from .depth import DepthModel
@@ -177,8 +177,13 @@ def render_animation(args, anim_args, animation_prompts, root):
             # apply scaling
             contrast_sample = prev_img * contrast
             # apply frame noising
+
             #MASKARGSEXPANSION : Left comment as to where to enter for noise addition masking 
-            noised_sample = add_noise(sample_from_cv2(contrast_sample), noise)
+            if args.use_mask:
+                noised_sample = add_noise_masked(args, sample_from_cv2(contrast_sample), noise)
+   
+            else:
+                noised_sample = add_noise(sample_from_cv2(contrast_sample), noise)
 
             # use transformed previous frame as init for current
             args.use_init = True
